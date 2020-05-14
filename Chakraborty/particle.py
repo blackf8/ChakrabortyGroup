@@ -8,9 +8,9 @@ def graphFrame(particleRadius, particleX, particleZ, counter, cwd):
     color = [];
     for i in range(len(particleRadius)):
         if particleRadius[i] == 1 * 25:
-            color.append("red");
+            color.append("red");#navy
         elif particleRadius[i] == 1.4 * 25:
-            color.append("yellow");
+            color.append("blue"); #lightcoral
         else:
             color.append("black");
     #look into the size variable, plotting circles.
