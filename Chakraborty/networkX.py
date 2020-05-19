@@ -9,7 +9,7 @@ def shrink(arr, scale):
     return arr
 
 
-def networkX(num, X, Y, radius):
+def networkX(num, X, Y, radius, color):
     graph = nx.Graph()
     graph.add_nodes_from(num)
     for count in range(0,1000):
@@ -24,9 +24,10 @@ def networkX(num, X, Y, radius):
     plt.ylabel('Y-Position')
     plt.title('Frame 1')
     radius = shrink(radius, .01)
-    nx.draw_networkx(graph, pos = pos,node_size = radius, with_labels=False, ax=ax) #draws the actual graph
+    nx.draw_networkx(graph, pos = pos,node_size = radius,node_color = color, with_labels=False, ax=ax) #draws the actual graph
     ax.tick_params(left=True, bottom=True, labelleft=True, labelbottom=True) #used to reveil the axis numbers
     plt.show()
+
 
 def dataQuery():
     cwd  = os.getcwd() #gets current path directory
@@ -37,20 +38,25 @@ def dataQuery():
     particleX = [] # list of x position data per node.
     particleZ = [] # list of y position data per node.
     particleNum = [] # particle num, this
+    particleColor = [] # Coloring for the particles, differentiated by size
     line = listOfData[23] # string data of the first frame
     for count in range(23, 1023):
         line = listOfData[count]
         splitLine = line.split(" ")
         particleNum.append(float(splitLine[0]))
         particleRadius.append(float(splitLine[1]))
+        if(float(splitLine[1] == "1")):
+            particleColor.append("red")
+        else:
+            particleColor.append("yellow")
         particleX.append(float(splitLine[2]))
         particleZ.append(float(splitLine[3]))
-    return(particleNum, particleX, particleZ, particleRadius)
+    return(particleNum, particleX, particleZ, particleRadius, particleColor)
 
 
 def main():
-    num, X, Y, radius = dataQuery()
-    networkX(num, X, Y, radius)
+    num, X, Y, radius, color = dataQuery()
+    networkX(num, X, Y, radius, color)
 main()
 
 
