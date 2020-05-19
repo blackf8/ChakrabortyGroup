@@ -8,10 +8,14 @@ def shrink(arr, scale):
         arr[element] = arr[element]*scale*element
     return arr
 
+def addEdges(graph,p1,p2):
+    for i in range(0,len(p1)):
+        graph.add_edge(p1[i],p2[i])
 
-def networkX(num, X, Y, radius, color):
+def networkX(num, X, Y, radius, color, p1, p2):
     graph = nx.Graph()
     graph.add_nodes_from(num)
+    #addEdges(graph,p1,p2)
     for count in range(0,1000):
         graph.add_node(count, pos = (X[count],Y[count]))
 
@@ -26,7 +30,9 @@ def networkX(num, X, Y, radius, color):
     radius = shrink(radius, .01)
     nx.draw_networkx(graph, pos = pos,node_size = radius,node_color = color, with_labels=False, ax=ax) #draws the actual graph
     ax.tick_params(left=True, bottom=True, labelleft=True, labelbottom=True) #used to reveil the axis numbers
+
     plt.show()
+    plt.savefig("Graph_with_Vertices")
 
 
 def dataQuery():
@@ -53,10 +59,26 @@ def dataQuery():
         particleZ.append(float(splitLine[3]))
     return(particleNum, particleX, particleZ, particleRadius, particleColor)
 
+def intQuery():
+    cwd  = os.getcwd() #gets current path directory
+    direction = "C:\\Users\\prabu\\OneDrive\Desktop\\School\\MikeInts\\Chakraborty"
+    listDir = os.listdir(direction+ "/ParticleInteration")  # returns a list of files within this directory
+    file = open(direction + "\\ParticleInteration/" + listDir[0], "r") #creates a file object from list listDir
+    listOfData = file.readlines() #Reads the lines of a specific file returned as a list
+    particleInteraction1 = []
+    particleInteraction2 = []
+    for i in range(26, 2349):
+        splitLine = listOfData[i].split(" ")
+        particleInteraction1.append(float(splitLine[0]))
+        particleInteraction2.append(float(splitLine[1]))
+    return particleInteraction1, particleInteraction2
 
 def main():
-    num, X, Y, radius, color = dataQuery()
-    networkX(num, X, Y, radius, color)
+
+    num, X, Y, radius, color = dataQuery() #gets the vertex data
+    p1Interact, p2Interact = intQuery() # gets the edge data
+    networkX(num, X, Y, radius, color, p1Interact, p2Interact) #plots the graph
+
 main()
 
 
