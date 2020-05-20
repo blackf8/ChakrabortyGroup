@@ -33,7 +33,7 @@ def lineParser(currentLine, particleRadius, particleX, particleZ):
 def main():
     cwd  = os.getcwd()
     listDir = os.listdir(cwd+ "/ParticleData")
-    file = open("ParticleData/" + listDir[1], "r")
+    file = open("ParticleData/" + listDir[0], "r")
     listOfData = file.readlines()
     counter = 0 #keeps track of the amount of frames in our graphs
     particleRadius = []

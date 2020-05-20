@@ -8,19 +8,21 @@ def shrink(arr, scale):
         arr[element] = arr[element]*scale*element
     return arr
 
-def addEdges(graph,p1,p2):
+def addEdges(graph,p1,p2,pos):
     for i in range(0,len(p1)):
-        graph.add_edge(p1[i],p2[i])
+        if(abs(pos[p1[i]][1]-pos[p2[i]][1]) < 50 and abs(pos[p1[i]][0]-pos[p2[i]][0]) < 50):
+            graph.add_edge(p1[i],p2[i])
+
 
 def networkX(num, X, Y, radius, color, p1, p2):
     graph = nx.Graph()
     graph.add_nodes_from(num)
-    #addEdges(graph,p1,p2)
+
     for count in range(0,1000):
         graph.add_node(count, pos = (X[count],Y[count]))
 
     pos= nx.get_node_attributes(graph, 'pos')
-
+    addEdges(graph,p1,p2,pos)
     fig = plt.figure()
     ax = fig.add_axes([.1,.1,.8,.8])
 
@@ -31,9 +33,8 @@ def networkX(num, X, Y, radius, color, p1, p2):
     nx.draw_networkx(graph, pos = pos,node_size = radius,node_color = color, with_labels=False, ax=ax) #draws the actual graph
     ax.tick_params(left=True, bottom=True, labelleft=True, labelbottom=True) #used to reveil the axis numbers
 
+    plt.savefig("C:\\Users\\prabu\\OneDrive\Desktop\\School\\MikeInts\\Chakraborty\\FinalImages\\Graph_with_Vertex_and_Edges")
     plt.show()
-    plt.savefig("Graph_with_Vertices")
-
 
 def dataQuery():
     cwd  = os.getcwd() #gets current path directory
