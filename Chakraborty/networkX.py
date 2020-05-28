@@ -1,42 +1,40 @@
 import networkx as nx
 import matplotlib.pyplot as plt
 import os
+import math
 
 #Shrinks a given array by a specific amount
 def shrink(arr, scale):
     for element in range(0,len(arr)):
-        arr[element] = arr[element]*scale*element
+        arr[element] = math.pow(arr[element],2)*scale
     return arr
-
 def addEdges(graph,p1,p2,pos):
     for i in range(0,len(p1)):
         if(abs(pos[p1[i]][1]-pos[p2[i]][1]) < 50 and abs(pos[p1[i]][0]-pos[p2[i]][0]) < 50):
             graph.add_edge(p1[i],p2[i])
 
 
-def networkX(num, X, Y, radius, color, p1, p2):
+def networkX(num, X, Y, radius, color, p1, p2, interact, frameNum):
     graph = nx.Graph()
     graph.add_nodes_from(num)
-
     for count in range(0,1000):
         graph.add_node(count, pos = (X[count],Y[count]))
-
     pos= nx.get_node_attributes(graph, 'pos')
     addEdges(graph,p1,p2,pos)
     fig = plt.figure()
     ax = fig.add_axes([.1,.1,.8,.8])
-
     plt.xlabel('X-Position')
     plt.ylabel('Y-Position')
-    plt.title('Frame 1')
-    radius = shrink(radius, .01)
-    nx.draw_networkx(graph, pos = pos,node_size = radius,node_color = color, with_labels=False, ax=ax) #draws the actual graph
+    title = 'Frame '+ str(frameNum)
+    plt.title(title)
+    radius = shrink(radius, math.pi)
+    nx.draw_networkx(graph, pos = pos,node_size = radius,node_color = color,edge_color = interact, with_labels=False, ax=ax) #draws the actual graph
     ax.tick_params(left=True, bottom=True, labelleft=True, labelbottom=True) #used to reveil the axis numbers
+    plt.savefig("C:\\Users\\prabu\\OneDrive\Desktop\\School\\MikeInts\\Chakraborty\\FinalImages\\FrameVideo\\"+title)
+    plt.close()
+    #plt.show()
 
-    plt.savefig("C:\\Users\\prabu\\OneDrive\Desktop\\School\\MikeInts\\Chakraborty\\FinalImages\\Graph_with_Vertex_and_Edges")
-    plt.show()
-
-def dataQuery():
+def dataQuery(start, end):
     cwd  = os.getcwd() #gets current path directory
     listDir = os.listdir(cwd+ "/ParticleData")  # returns a list of files within this directory
     file = open("ParticleData/" + listDir[0], "r") #creates a file object from list listDir
@@ -46,13 +44,13 @@ def dataQuery():
     particleZ = [] # list of y position data per node.
     particleNum = [] # particle num, this
     particleColor = [] # Coloring for the particles, differentiated by size
-    line = listOfData[23] # string data of the first frame
-    for count in range(23, 1023):
+    line = listOfData[start] # string data of the first frame
+    for count in range(start, end):
         line = listOfData[count]
         splitLine = line.split(" ")
         particleNum.append(float(splitLine[0]))
         particleRadius.append(float(splitLine[1]))
-        if(float(splitLine[1] == "1")):
+        if(splitLine[1] == "1"):
             particleColor.append("red")
         else:
             particleColor.append("yellow")
@@ -60,7 +58,7 @@ def dataQuery():
         particleZ.append(float(splitLine[3]))
     return(particleNum, particleX, particleZ, particleRadius, particleColor)
 
-def intQuery():
+def intQuery(start2):
     cwd  = os.getcwd() #gets current path directory
     direction = "C:\\Users\\prabu\\OneDrive\Desktop\\School\\MikeInts\\Chakraborty"
     listDir = os.listdir(direction+ "/ParticleInteration")  # returns a list of files within this directory
@@ -68,18 +66,41 @@ def intQuery():
     listOfData = file.readlines() #Reads the lines of a specific file returned as a list
     particleInteraction1 = []
     particleInteraction2 = []
-    for i in range(26, 2349):
-        splitLine = listOfData[i].split(" ")
+    particleInteraction3 = []
+    con = "#" in listOfData[start2]
+    while (con == False):
+        splitLine = listOfData[start2].split(" ")
         particleInteraction1.append(float(splitLine[0]))
         particleInteraction2.append(float(splitLine[1]))
-    return particleInteraction1, particleInteraction2
+        temp = splitLine[2]
+        if(temp=="1"):
+            particleInteraction3.append("darkcyan")
+        elif(temp == "2"):
+            particleInteraction3.append("darkmagenta")
+        elif(temp == "3"):
+            particleInteraction3.append("black")
+        elif(temp == "0"):
+            particleInteraction3.append("peru")
+        start2 = start2 + 1
+        con = "#" in listOfData[start2]
+    #for i in range(start2, end2):
+    return particleInteraction1, particleInteraction2, particleInteraction3, start2 + 6
+
+def initializationData(frames): # assume 1
+    start = 23
+    for count in range(1,frames):
+        start = start + 1006
+    end = start + 1000
+    return start, end
 
 def main():
-
-    num, X, Y, radius, color = dataQuery() #gets the vertex data
-    p1Interact, p2Interact = intQuery() # gets the edge data
-    networkX(num, X, Y, radius, color, p1Interact, p2Interact) #plots the graph
-
+    frames = int(input("How many frames do you want to produce?"))
+    start2 = 26
+    for count in range(0,frames):
+        start, end = initializationData(count + 1)
+        num, X, Y, radius, color = dataQuery(start, end) #gets the vertex data
+        p1Interact, p2Interact, typeInteract, start2 = intQuery(start2) # gets the edge data
+        networkX(num, X, Y, radius, color, p1Interact, p2Interact, typeInteract, count + 1) #plots the graph
 main()
 
 
