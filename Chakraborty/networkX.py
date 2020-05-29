@@ -31,8 +31,8 @@ def networkX(num, X, Y, radius, color, p1, p2, interact, frameNum):
     nx.draw_networkx(graph, pos = pos,node_size = radius,node_color = color,edge_color = interact, with_labels=False, ax=ax) #draws the actual graph
     ax.tick_params(left=True, bottom=True, labelleft=True, labelbottom=True) #used to reveil the axis numbers
     plt.savefig("C:\\Users\\prabu\\OneDrive\Desktop\\School\\MikeInts\\Chakraborty\\FinalImages\\FrameVideo\\"+title)
+    plt.show()
     plt.close()
-    #plt.show()
 
 def dataQuery(start, end):
     cwd  = os.getcwd() #gets current path directory
@@ -73,14 +73,15 @@ def intQuery(start2):
         particleInteraction1.append(float(splitLine[0]))
         particleInteraction2.append(float(splitLine[1]))
         temp = splitLine[2]
-        if(temp=="1"):
+        if(temp=="1"): #frictionless contact
             particleInteraction3.append("darkcyan")
-        elif(temp == "2"):
+        elif(temp == "2"): #non sliding frictional
             particleInteraction3.append("darkmagenta")
-        elif(temp == "3"):
+        elif(temp == "3"): #sliding frictional
             particleInteraction3.append("black")
-        elif(temp == "0"):
+        elif(temp == "0"): #no contact, aka lubricated contacts
             particleInteraction3.append("peru")
+            #first do contacts and no contacts (0 vs non 0)
         start2 = start2 + 1
         con = "#" in listOfData[start2]
     #for i in range(start2, end2):
