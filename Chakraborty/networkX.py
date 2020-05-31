@@ -31,13 +31,14 @@ def networkX(num, X, Y, radius, color, p1, p2, interact, frameNum):
     nx.draw_networkx(graph, pos = pos,node_size = radius,node_color = color,edge_color = interact, with_labels=False, ax=ax) #draws the actual graph
     ax.tick_params(left=True, bottom=True, labelleft=True, labelbottom=True) #used to reveil the axis numbers
     plt.savefig("C:\\Users\\prabu\\OneDrive\Desktop\\School\\MikeInts\\Chakraborty\\FinalImages\\FrameVideo\\"+title)
-    plt.show()
+    #plt.show()
     plt.close()
 
 def dataQuery(start, end):
     cwd  = os.getcwd() #gets current path directory
-    listDir = os.listdir(cwd+ "/ParticleData")  # returns a list of files within this directory
-    file = open("ParticleData/" + listDir[0], "r") #creates a file object from list listDir
+    direction = "C:\\Users\\prabu\\OneDrive\Desktop\\School\\MikeInts\\Chakraborty"
+    listDir = os.listdir(direction+ "/ParticleData")  # returns a list of files within this directory
+    file = open(direction + "\\ParticleData/" + listDir[0], "r") #creates a file object from list listDir
     listOfData = file.readlines() #Reads the lines of a specific file returned as a list
     particleRadius = [] #list of particle radius, could be useful for graph
     particleX = [] # list of x position data per node.
@@ -51,9 +52,9 @@ def dataQuery(start, end):
         particleNum.append(float(splitLine[0]))
         particleRadius.append(float(splitLine[1]))
         if(splitLine[1] == "1"):
-            particleColor.append("red")
+            particleColor.append("grey")
         else:
-            particleColor.append("yellow")
+            particleColor.append("grey")
         particleX.append(float(splitLine[2]))
         particleZ.append(float(splitLine[3]))
     return(particleNum, particleX, particleZ, particleRadius, particleColor)
@@ -73,15 +74,21 @@ def intQuery(start2):
         particleInteraction1.append(float(splitLine[0]))
         particleInteraction2.append(float(splitLine[1]))
         temp = splitLine[2]
-        if(temp=="1"): #frictionless contact
-            particleInteraction3.append("darkcyan")
-        elif(temp == "2"): #non sliding frictional
-            particleInteraction3.append("darkmagenta")
-        elif(temp == "3"): #sliding frictional
-            particleInteraction3.append("black")
-        elif(temp == "0"): #no contact, aka lubricated contacts
-            particleInteraction3.append("peru")
+        #if(temp=="1"): #frictionless contact
+            #particleInteraction3.append("darkcyan")
+        #elif(temp == "2"): #non sliding frictional
+            #particleInteraction3.append("darkmagenta")
+        #elif(temp == "3"): #sliding frictional
+            #particleInteraction3.append("black")
+        #elif(temp == "0"): #no contact, aka lubricated contacts
+            #particleInteraction3.append("peru")
             #first do contacts and no contacts (0 vs non 0)
+        if(temp == "0"): #no contact, aka lubricated contacts
+            particleInteraction3.append("red")
+        else: #contact, non-lubricated
+            particleInteraction3.append("blue")
+
+
         start2 = start2 + 1
         con = "#" in listOfData[start2]
     #for i in range(start2, end2):
