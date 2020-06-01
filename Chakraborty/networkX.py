@@ -33,7 +33,7 @@ def networkX(num, X, Y, radius, color, p1, p2, interact, frameNum):
     plt.savefig("C:\\Users\\prabu\\OneDrive\Desktop\\School\\MikeInts\\Chakraborty\\FinalImages\\FrameVideo\\"+title)
     #plt.show()
     plt.close()
-
+    print(frameNum)
 def dataQuery(start, end):
     cwd  = os.getcwd() #gets current path directory
     direction = "C:\\Users\\prabu\\OneDrive\Desktop\\School\\MikeInts\\Chakraborty"
