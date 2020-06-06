@@ -39,7 +39,7 @@ def main():
     particleRadius = []
     particleX = []
     particleZ = []
-    for i in range(17, (1006*5*26) + 17,1006*5): #130,797
+    for i in range(17, (1006*800) + 17,1006): #130,797
         temp = i
         counter = counter + 1
         for j in range(i + 6, temp + 1006):
