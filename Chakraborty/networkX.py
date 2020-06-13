@@ -2,6 +2,7 @@ import networkx as nx
 import matplotlib.pyplot as plt
 import os
 import math
+from matplotlib.lines import Line2D
 
 #Shrinks a given array by a specific amount
 def shrink(arr, scale):
@@ -23,6 +24,10 @@ def networkX(num, X, Y, radius, color, p1, p2, interact, frameNum):
     addEdges(graph,p1,p2,pos)
     fig = plt.figure()
     ax = fig.add_axes([.1,.1,.8,.8])
+
+
+    legendElements = [Line2D([0],[0], color = 'b', label = 'Contact/Lubricated', lw=3),
+                      Line2D([0],[0],color = 'r', label = 'No Contact/Non-Lubricated', lw = 3)]
     plt.xlabel('X-Position')
     plt.ylabel('Y-Position')
     title = 'Frame '+ str(frameNum)
@@ -30,8 +35,9 @@ def networkX(num, X, Y, radius, color, p1, p2, interact, frameNum):
     radius = shrink(radius, math.pi)
     nx.draw_networkx(graph, pos = pos,node_size = radius,node_color = color,edge_color = interact, with_labels=False, ax=ax) #draws the actual graph
     ax.tick_params(left=True, bottom=True, labelleft=True, labelbottom=True) #used to reveil the axis numbers
-    plt.savefig("C:\\Users\\prabu\\OneDrive\Desktop\\School\\MikeInts\\Chakraborty\\FinalImages\\FrameVideo\\"+title)
-    #plt.show()
+    plt.legend(handles = legendElements,bbox_to_anchor=(1, 0.5));
+    #plt.savefig("C:\\Users\\prabu\\OneDrive\Desktop\\School\\MikeInts\\Chakraborty\\FinalImages\\FrameVideo\\"+title)
+    plt.show()
     plt.close()
     print(frameNum)
 def dataQuery(start, end):
@@ -111,6 +117,13 @@ def main():
         networkX(num, X, Y, radius, color, p1Interact, p2Interact, typeInteract, count + 1) #plots the graph
 main()
 
+
+#shear rates
+#cum strain
+#num of contact vs non contact forces
+#time elapsed st files mby?
+#standard legend
+#boundary contacts
 
 
 
