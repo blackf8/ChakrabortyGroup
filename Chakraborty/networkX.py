@@ -15,7 +15,7 @@ def addEdges(graph,p1,p2,pos):
             graph.add_edge(p1[i],p2[i])
 
 
-def networkX(num, X, Y, radius, color, p1, p2, interact, frameNum):
+def networkX(num, X, Y, radius, color, p1, p2, interact, frameNum, redCount, blueCount, cumulatedStress):
     graph = nx.Graph()
     graph.add_nodes_from(num)
     for count in range(0,1000):
@@ -25,9 +25,14 @@ def networkX(num, X, Y, radius, color, p1, p2, interact, frameNum):
     fig = plt.figure()
     ax = fig.add_axes([.1,.1,.8,.8])
 
+    cumStress = cumulatedStress.split(" ")[4]
+    legendElements = [Line2D([0],[0], color = 'b', label = 'Contact', lw=3),
+                      Line2D([0],[0],color = 'r', label = 'No Contact', lw = 3),
+                      Line2D([0],[0], marker = 'o',color = 'w', label = '#Blue:' + str(blueCount), markerfacecolor = 'black', markersize = 5),
+                      Line2D([0],[0], marker = 'o',color = 'w', label = '#Red:' + str(redCount), markerfacecolor = 'black', markersize = 5),
+                      Line2D([0],[0], marker = 'o',color = 'w', label = 'Stress' + cumStress[:5], markerfacecolor = 'black', markersize = 5)]
 
-    legendElements = [Line2D([0],[0], color = 'b', label = 'Contact/Lubricated', lw=3),
-                      Line2D([0],[0],color = 'r', label = 'No Contact/Non-Lubricated', lw = 3)]
+
     plt.xlabel('X-Position')
     plt.ylabel('Y-Position')
     title = 'Frame '+ str(frameNum)
@@ -35,7 +40,7 @@ def networkX(num, X, Y, radius, color, p1, p2, interact, frameNum):
     radius = shrink(radius, math.pi)
     nx.draw_networkx(graph, pos = pos,node_size = radius,node_color = color,edge_color = interact, with_labels=False, ax=ax) #draws the actual graph
     ax.tick_params(left=True, bottom=True, labelleft=True, labelbottom=True) #used to reveil the axis numbers
-    plt.legend(handles = legendElements,bbox_to_anchor=(1, 0.5));
+    plt.legend(handles = legendElements,loc = 'upper right')#bbox_to_anchor=(1, 1));
     #plt.savefig("C:\\Users\\prabu\\OneDrive\Desktop\\School\\MikeInts\\Chakraborty\\FinalImages\\FrameVideo\\"+title)
     plt.show()
     plt.close()
@@ -52,6 +57,7 @@ def dataQuery(start, end):
     particleNum = [] # particle num, this
     particleColor = [] # Coloring for the particles, differentiated by size
     line = listOfData[start] # string data of the first frame
+    cumulatedStress = listOfData[start-6]
     for count in range(start, end):
         line = listOfData[count]
         splitLine = line.split(" ")
@@ -63,7 +69,7 @@ def dataQuery(start, end):
             particleColor.append("grey")
         particleX.append(float(splitLine[2]))
         particleZ.append(float(splitLine[3]))
-    return(particleNum, particleX, particleZ, particleRadius, particleColor)
+    return(particleNum, particleX, particleZ, particleRadius, particleColor, cumulatedStress)
 
 def intQuery(start2):
     cwd  = os.getcwd() #gets current path directory
@@ -75,6 +81,9 @@ def intQuery(start2):
     particleInteraction2 = []
     particleInteraction3 = []
     con = "#" in listOfData[start2]
+    redCount = 0;
+    blueCount = 0;
+
     while (con == False):
         splitLine = listOfData[start2].split(" ")
         particleInteraction1.append(float(splitLine[0]))
@@ -91,14 +100,16 @@ def intQuery(start2):
             #first do contacts and no contacts (0 vs non 0)
         if(temp == "0"): #no contact, aka lubricated contacts
             particleInteraction3.append("red")
+            redCount = redCount + 1
         else: #contact, non-lubricated
             particleInteraction3.append("blue")
+            blueCount = blueCount + 1
 
 
         start2 = start2 + 1
         con = "#" in listOfData[start2]
     #for i in range(start2, end2):
-    return particleInteraction1, particleInteraction2, particleInteraction3, start2 + 6
+    return particleInteraction1, particleInteraction2, particleInteraction3, start2 + 6, redCount, blueCount
 
 def initializationData(frames): # assume 1
     start = 23
@@ -112,17 +123,17 @@ def main():
     start2 = 26
     for count in range(0,frames):
         start, end = initializationData(count + 1)
-        num, X, Y, radius, color = dataQuery(start, end) #gets the vertex data
-        p1Interact, p2Interact, typeInteract, start2 = intQuery(start2) # gets the edge data
-        networkX(num, X, Y, radius, color, p1Interact, p2Interact, typeInteract, count + 1) #plots the graph
+        num, X, Y, radius, color, cumulatedStress = dataQuery(start, end) #gets the vertex data
+        p1Interact, p2Interact, typeInteract, start2, redCount, blueCount = intQuery(start2) # gets the edge data
+        networkX(num, X, Y, radius, color, p1Interact, p2Interact, typeInteract, count + 1, redCount, blueCount,cumulatedStress) #plots the graph
 main()
 
 
 #shear rates
 #cum strain
-#num of contact vs non contact forces
+#num of contact vs non contact forces [check]
 #time elapsed st files mby?
-#standard legend
+#standard legend [check]
 #boundary contacts
 
 
