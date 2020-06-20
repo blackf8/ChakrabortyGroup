@@ -2,6 +2,7 @@ import networkx as nx
 import matplotlib.pyplot as plt
 import os
 import math
+import timeit
 from matplotlib.lines import Line2D
 
 #Shrinks a given array by a specific amount
@@ -15,7 +16,7 @@ def addEdges(graph,p1,p2,pos):
             graph.add_edge(p1[i],p2[i])
 
 
-def networkX(num, X, Y, radius, color, p1, p2, interact, frameNum, redCount, blueCount, cumulatedStress):
+def networkX(num, X, Y, radius, color, p1, p2, interact, frameNum, redCount, blueCount, cumulatedStress,  shearRate):
     graph = nx.Graph()
     graph.add_nodes_from(num)
     for count in range(0,1000):
@@ -26,11 +27,13 @@ def networkX(num, X, Y, radius, color, p1, p2, interact, frameNum, redCount, blu
     ax = fig.add_axes([.1,.1,.8,.8])
 
     cumStress = cumulatedStress.split(" ")[4]
-    legendElements = [Line2D([0],[0], color = 'b', label = 'Contact', lw=3),
-                      Line2D([0],[0],color = 'r', label = 'No Contact', lw = 3),
-                      Line2D([0],[0], marker = 'o',color = 'w', label = '#Blue:' + str(blueCount), markerfacecolor = 'black', markersize = 5),
-                      Line2D([0],[0], marker = 'o',color = 'w', label = '#Red:' + str(redCount), markerfacecolor = 'black', markersize = 5),
-                      Line2D([0],[0], marker = 'o',color = 'w', label = 'Stress' + cumStress[:5], markerfacecolor = 'black', markersize = 5)]
+    shearRate= shearRate.split(" ")[4]
+    legendElements = [Line2D([0],[0], color = 'b', label = str(blueCount) +'|#Contact', lw=3),
+                      Line2D([0],[0],color = 'r', label = str(redCount) + '|#!Contact' , lw = 3),
+                      #Line2D([0],[0], marker = 'o',color = 'w', label = '#Blue:' + str(blueCount), markerfacecolor = 'black', markersize = 5),
+                      #Line2D([0],[0], marker = 'o',color = 'w', label = '#Red:' + str(redCount), markerfacecolor = 'black', markersize = 5),
+                      Line2D([0],[0], marker = 'o',color = 'w', label = 'cumStrn:' + cumStress[:6], markerfacecolor = 'black', markersize = 5),
+                      Line2D([0],[0], marker = 'o',color = 'w', label = 'shearRt:' + shearRate[:6], markerfacecolor = 'black', markersize = 5)]
 
 
     plt.xlabel('X-Position')
@@ -58,6 +61,7 @@ def dataQuery(start, end):
     particleColor = [] # Coloring for the particles, differentiated by size
     line = listOfData[start] # string data of the first frame
     cumulatedStress = listOfData[start-6]
+    shearRate = listOfData[start-4]
     for count in range(start, end):
         line = listOfData[count]
         splitLine = line.split(" ")
@@ -69,7 +73,7 @@ def dataQuery(start, end):
             particleColor.append("grey")
         particleX.append(float(splitLine[2]))
         particleZ.append(float(splitLine[3]))
-    return(particleNum, particleX, particleZ, particleRadius, particleColor, cumulatedStress)
+    return(particleNum, particleX, particleZ, particleRadius, particleColor, cumulatedStress, shearRate)
 
 def intQuery(start2):
     cwd  = os.getcwd() #gets current path directory
@@ -119,13 +123,15 @@ def initializationData(frames): # assume 1
     return start, end
 
 def main():
+    startTime = timeit.default_timer()
     frames = int(input("How many frames do you want to produce?"))
     start2 = 26
     for count in range(0,frames):
         start, end = initializationData(count + 1)
-        num, X, Y, radius, color, cumulatedStress = dataQuery(start, end) #gets the vertex data
+        num, X, Y, radius, color, cumulatedStress, shearRate = dataQuery(start, end) #gets the vertex data
         p1Interact, p2Interact, typeInteract, start2, redCount, blueCount = intQuery(start2) # gets the edge data
-        networkX(num, X, Y, radius, color, p1Interact, p2Interact, typeInteract, count + 1, redCount, blueCount,cumulatedStress) #plots the graph
+        networkX(num, X, Y, radius, color, p1Interact, p2Interact, typeInteract, count + 1, redCount, blueCount,cumulatedStress, shearRate) #plots the graph
+    print("Runtime: ", timeit.default_timer() - startTime)
 main()
 
 
