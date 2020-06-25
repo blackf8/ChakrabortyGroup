@@ -1,5 +1,7 @@
 import os
-
+import networkx as nx
+import matplotlib.pyplot as plt
+import math
 #test
 #height of box times the cumulative strain
 #0.000214075 * 72.1195 == shift
@@ -86,30 +88,107 @@ Fields:
 frameTitle: Title for the graph/frame retrieved from the FileReader.frameDetails() method.
 parReader: The FileReader object that reads the par files.
 intreader: The FileReader object that reads the int files.
+graph: A graph object that provides the image of our frame.
 """
 class Frame:
 
-    def __init__(self, parReader, intReader): # postiion videos
-        self.frameTitle = parReader.frameDetails()
+    def __init__(self, parReader, intReader): # network videos
+        self.frameTitle = "Network | " + parReader.frameDetails()
         self.parReader  = parReader
         self.intReader = intReader
+        self.graph = nx.Graph()
 
-    def __init__(self, parReader): # network videos
-        self.frameTitle = parReader.frameDetails()
+    def __init__(self, parReader): # postiion videos
+        self.frameTitle =  "Position | "  + parReader.frameDetails()
         self.parReader  = parReader
         self.intReader = None
+        self.graph = nx.Graph()
 
+    """
+    Details: The method parser will clean our data for plotting via self.networkX().
+    @return None.
+    """
+    def parser(self):
+        numSmall = 0
+        numLarge = 0
+
+        color1 = "red"
+        color2 = "grey"
+        if("Position" in self.frameTitle):
+            color1 = "grey"
+
+        for i in range(0,1000):
+            line = self.parReader.next().split(" ")
+            particleName = line[0]
+            particleRadius = float(line[1])
+            xPos = float(line[2])
+            zPos = float(line[3])
+            if (particleRadius == 1):
+                numSmall = numSmall + 1
+                self.graph.add_node(i,pos = (xPos, zPos), size = particleRadius, color = color1)
+            elif(particleRadius == 1.4):
+                numLarge = numLarge + 1
+                self.graph.add_node(i,pos = (xPos, zPos), size = particleRadius, color = color2)
+        self.networkX()
+
+    """
+    Details: The method networkX will use the final set of data to produce our graph/frame.
+    @return None.
+    """
     def networkX(self):
+        cumStrain, stress, legendElements = self.legendData()
+
+        fig = plt.figure()
+        ax = fig.add_axes([.1,.1,.8,.8])
+
+        plt.xlabel('X-Position')
+        plt.ylabel('Y-Position')
+        plt.title(self.frameTitle)
+
+        positions = nx.get_node_attributes(self.graph, 'pos')
+        sizes = self.shrink(list(nx.get_node_attributes(self.graph,'size').values()), math.pi)
+        colors = list(nx.get_node_attributes(self.graph, 'color').values())
+
+        nx.draw_networkx(self.graph, pos = positions,node_size = sizes, node_color = colors, with_labels = False)
+        ax.tick_params(left=True, bottom=True, labelleft=True, labelbottom=True) #used to reveil the axis numbers
+        plt.legend(handles = legendElements,loc = 'upper right')#bbox_to_anchor=(1, 1));
+        plt.show()
         return None
 
+    """
+    Details: The method shrink reduces an array's elements by a scalar amount.
+    @param arr: The array that we will be modifying.
+    @param scale: The scalar amount the array will be modified by.
+    @return arr: The newly modified array.
+    """
+    #Shrinks a given array by a specific amount
+    def shrink(self, arr, scale):
+        for element in range(0,len(arr)):
+            arr[element] = math.pow(arr[element],2)*scale
+        return arr
+
+    """
+    Details: The method legendData produces all of the data needed for the legend of the graph.
+    @return cumStrain,stress: The cumStrain and stress of the system at hand.
+    """
     def legendData(self):
         cumStrain = self.parReader.next().split(" ")[4]
-        print(cumStrain)
-        return None
+        self.parReader.skip(1)
+        stress = self.parReader.next().split(" ")[4]
+        self.parReader.skip(3)
 
+        legendElements = None
+        #[Line2D([0],[0], marker = 'o',color = 'w', label = 'cumStrn:' + cumStrain, markerfacecolor = 'black', markersize = 5),
+        #Line2D([0],[0], marker = 'o',color = 'w', label = 'shearRt:' + stress, markerfacecolor = 'black', markersize = 5)]
+        return cumStrain,stress, legendElements
+        #You just finished this class. LOL psych! 6/24/2020
+
+    """
+    Details: The method toString prints the objects name for debugging purposes.
+    @return self.frameTitle: Returns the title of this frame object.
+    """
     def toString(self):
         return self.frameTitle
-
 
 def main():
     cwd  = os.getcwd() #gets current path directory
@@ -120,4 +199,5 @@ def main():
     x.skip(17)
     frame1 = Frame(x)
     frame1.legendData()
+    frame1.parser()
 main()

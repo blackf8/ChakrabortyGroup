@@ -41,6 +41,7 @@ def networkX(num, X, Y, radius, color, p1, p2, interact, frameNum, redCount, blu
     title = 'Frame '+ str(frameNum)
     plt.title(title)
     radius = shrink(radius, math.pi)
+    print(radius)
     nx.draw_networkx(graph, pos = pos,node_size = radius,node_color = color,edge_color = interact, with_labels=False, ax=ax) #draws the actual graph
     ax.tick_params(left=True, bottom=True, labelleft=True, labelbottom=True) #used to reveil the axis numbers
     plt.legend(handles = legendElements,loc = 'upper right')#bbox_to_anchor=(1, 1));
