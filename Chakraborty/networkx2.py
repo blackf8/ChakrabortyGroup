@@ -1,7 +1,9 @@
 import os
+import math
+import timeit
 import networkx as nx
 import matplotlib.pyplot as plt
-import math
+from matplotlib.lines import Line2D
 #test
 #height of box times the cumulative strain
 #0.000214075 * 72.1195 == shift
@@ -80,7 +82,7 @@ class FileReader:
 
 """
 Details: The frame object is used to produce a single graph with networkx/matplotlib packadges.
-There are two constructors for the different graphs we want to create depending on available data.
+This constructor can be overloaded so that it can create both position and network graphs.
 @param parReader: A FileReader object used to read par files containing data on particle positions.
 @param intReader: A FileReader object used to read int files containing data on particle interations.
 
@@ -92,30 +94,68 @@ graph: A graph object that provides the image of our frame.
 """
 class Frame:
 
-    def __init__(self, parReader, intReader): # network videos
-        self.frameTitle = "Network | " + parReader.frameDetails()
+    def __init__(self, parReader, intReader = None): # network videos
+        if(intReader == None):
+            type = "Position | "
+        else:
+            type = "Network | "
+
+        self.frameTitle =    type + parReader.frameDetails()
         self.parReader  = parReader
         self.intReader = intReader
         self.graph = nx.Graph()
 
-    def __init__(self, parReader): # postiion videos
-        self.frameTitle =  "Position | "  + parReader.frameDetails()
-        self.parReader  = parReader
-        self.intReader = None
-        self.graph = nx.Graph()
+    """
+    Details: The method run will automatically call frame methods to produce a frame\graph.
+    The if statement allows for the incorporation of the edges for our network graph.
+    """
+    def run(self):
+        self.parReader.skip(17)
+        legendElements = self.legendData()
+        self.parser()
+        if("Network" in self.frameTitle):
+            self.parserInt(legendElements)
+        self.networkX(legendElements)
 
     """
-    Details: The method parser will clean our data for plotting via self.networkX().
-    @return None.
+    Details: The method parserInt will clean the data from the intFile for plotting.
+    This method is only called for network graphs.
+    @param legendElements: A list of legend elements that will be modified with more information.
+    """
+    def parserInt(self, legendElements):
+        self.intReader.skip(26)
+        condition = False
+        line = self.intReader.next()
+        posInfo = nx.get_node_attributes(self.graph, 'pos')
+        numRed = 0
+        numBlue = 0
+        while(condition == False):
+            line = line.split(" ")
+            first = float(line[0])
+            second = float(line[1])
+            if(abs(posInfo[first][1]-posInfo[second][1]) < 50 and abs(posInfo[first][0]-posInfo[second][0]) < 50):
+                if(line[2] == "0"): #no-contact
+                    self.graph.add_edge(float(line[0]), float(line[1]), color = "red")
+                    numRed = numRed + 1
+                elif(line[2] != "0"): #contact
+                    self.graph.add_edge(float(line[0]), float(line[1]), color = "blue")
+                    numBlue = numBlue + 1
+            line = self.intReader.next()
+            condition = '#' in line
+        legendElements.append(Line2D([0],[0],color = 'r', label = str(numRed) + '|#!Contact' , lw = 3))
+        legendElements.append(Line2D([0],[0], color = 'b', label = str(numBlue) +'|#Contact', lw=3))
+
+    """
+    Details: The method parser will clean our particle pos data for plotting via self.networkX().
     """
     def parser(self):
         numSmall = 0
         numLarge = 0
 
-        color1 = "red"
-        color2 = "grey"
-        if("Position" in self.frameTitle):
-            color1 = "grey"
+        color1 = "grey"
+        color2 = "red"
+        if("Network" in self.frameTitle):
+            color2 = "grey"
 
         for i in range(0,1000):
             line = self.parReader.next().split(" ")
@@ -129,14 +169,12 @@ class Frame:
             elif(particleRadius == 1.4):
                 numLarge = numLarge + 1
                 self.graph.add_node(i,pos = (xPos, zPos), size = particleRadius, color = color2)
-        self.networkX()
 
     """
     Details: The method networkX will use the final set of data to produce our graph/frame.
-    @return None.
+    @param legendElements: A list of elements that build the legend which is added to the graph.
     """
-    def networkX(self):
-        cumStrain, stress, legendElements = self.legendData()
+    def networkX(self, legendElements):
 
         fig = plt.figure()
         ax = fig.add_axes([.1,.1,.8,.8])
@@ -149,11 +187,15 @@ class Frame:
         sizes = self.shrink(list(nx.get_node_attributes(self.graph,'size').values()), math.pi)
         colors = list(nx.get_node_attributes(self.graph, 'color').values())
 
-        nx.draw_networkx(self.graph, pos = positions,node_size = sizes, node_color = colors, with_labels = False)
+        edges = None
+        if(self.intReader != None):
+            edges = list(nx.get_edge_attributes(self.graph, 'color').values())
+
+        nx.draw_networkx(self.graph, pos = positions,node_size = sizes, node_color = colors, edge_color = edges, with_labels = False)
         ax.tick_params(left=True, bottom=True, labelleft=True, labelbottom=True) #used to reveil the axis numbers
         plt.legend(handles = legendElements,loc = 'upper right')#bbox_to_anchor=(1, 1));
-        plt.show()
-        return None
+        #plt.show()
+
 
     """
     Details: The method shrink reduces an array's elements by a scalar amount.
@@ -168,8 +210,8 @@ class Frame:
         return arr
 
     """
-    Details: The method legendData produces all of the data needed for the legend of the graph.
-    @return cumStrain,stress: The cumStrain and stress of the system at hand.
+    Details: The method legendData produces all of the pos data needed for the legend of the graph.
+    @legendElements: The legend elements saved to a list for use in the networkx() method.
     """
     def legendData(self):
         cumStrain = self.parReader.next().split(" ")[4]
@@ -177,11 +219,9 @@ class Frame:
         stress = self.parReader.next().split(" ")[4]
         self.parReader.skip(3)
 
-        legendElements = None
-        #[Line2D([0],[0], marker = 'o',color = 'w', label = 'cumStrn:' + cumStrain, markerfacecolor = 'black', markersize = 5),
-        #Line2D([0],[0], marker = 'o',color = 'w', label = 'shearRt:' + stress, markerfacecolor = 'black', markersize = 5)]
-        return cumStrain,stress, legendElements
-        #You just finished this class. LOL psych! 6/24/2020
+        legendElements = [Line2D([0],[0], marker = 'o',color = 'w', label = 'cumStrn:' + cumStrain[:6], markerfacecolor = 'black', markersize = 5),
+                          Line2D([0],[0], marker = 'o',color = 'w', label = 'shearRt:' + stress[:6], markerfacecolor = 'black', markersize = 5)]
+        return legendElements
 
     """
     Details: The method toString prints the objects name for debugging purposes.
@@ -191,13 +231,21 @@ class Frame:
         return self.frameTitle
 
 def main():
-    cwd  = os.getcwd() #gets current path directory
-    direction = "C:\\Users\\prabu\\OneDrive\Desktop\\School\\MikeInts\\Chakraborty"
-    listDir = os.listdir(direction+ "/ParticleData")  # returns a list of files within this directory
-    file = open(direction + "\\ParticleData/" + listDir[0], "r") #creates a file object from list listDir
-    x = FileReader(listDir[0],direction + "\\ParticleData/")
-    x.skip(17)
-    frame1 = Frame(x)
-    frame1.legendData()
-    frame1.parser()
+    startTime = timeit.default_timer()
+
+    direction = "C:\\Users\\prabu\\OneDrive\Desktop\\School\\MikeInts\\Chakraborty\\ParticleData/"
+    listDir = os.listdir(direction)  # returns a list of files within this directory
+    file = open(direction+ listDir[0], "r") #creates a file object from list listDir
+    x = FileReader(listDir[0],direction)
+
+    direction = "C:\\Users\\prabu\\OneDrive\Desktop\\School\\MikeInts\\Chakraborty\\ParticleInteration/"
+    listDir = os.listdir(direction)  # returns a list of files within this directory
+    file = open(direction + listDir[0], "r") #creates a file object from list listDir
+    y = FileReader(listDir[0], direction)
+
+
+    frame1 = Frame(x,y)
+    frame1.run()
+
+    print("Runtime: ", timeit.default_timer() - startTime)
 main()

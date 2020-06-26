@@ -41,14 +41,14 @@ def networkX(num, X, Y, radius, color, p1, p2, interact, frameNum, redCount, blu
     title = 'Frame '+ str(frameNum)
     plt.title(title)
     radius = shrink(radius, math.pi)
-    print(radius)
+    #print(radius)
     nx.draw_networkx(graph, pos = pos,node_size = radius,node_color = color,edge_color = interact, with_labels=False, ax=ax) #draws the actual graph
     ax.tick_params(left=True, bottom=True, labelleft=True, labelbottom=True) #used to reveil the axis numbers
     plt.legend(handles = legendElements,loc = 'upper right')#bbox_to_anchor=(1, 1));
     #plt.savefig("C:\\Users\\prabu\\OneDrive\Desktop\\School\\MikeInts\\Chakraborty\\FinalImages\\FrameVideo\\"+title)
-    plt.show()
+    #plt.show()
     plt.close()
-    print(frameNum)
+    #print(frameNum)
 def dataQuery(start, end):
     cwd  = os.getcwd() #gets current path directory
     direction = "C:\\Users\\prabu\\OneDrive\Desktop\\School\\MikeInts\\Chakraborty"
@@ -125,7 +125,7 @@ def initializationData(frames): # assume 1
 
 def main():
     startTime = timeit.default_timer()
-    frames = int(input("How many frames do you want to produce?"))
+    frames = 1#int(input("How many frames do you want to produce?"))
     start2 = 26
     for count in range(0,frames):
         start, end = initializationData(count + 1)
