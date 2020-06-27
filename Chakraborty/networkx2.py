@@ -94,12 +94,15 @@ graph: A graph object that provides the image of our frame.
 """
 class Frame:
 
-    def __init__(self, parReader, intReader = None): # network videos
+    def __init__(self, parReader, intReader = None, frameNum = None): # network videos
         if(intReader == None):
             type = "Position | "
         else:
             type = "Network | "
-
+        if(frameNum == None):
+            self.frameNum = 1
+        else:
+            self.frameNum = frameNum
         self.frameTitle =    type + parReader.frameDetails()
         self.parReader  = parReader
         self.intReader = intReader
@@ -110,7 +113,7 @@ class Frame:
     The if statement allows for the incorporation of the edges for our network graph.
     """
     def run(self):
-        self.parReader.skip(17)
+        #self.parReader.skip(17)
         legendElements = self.legendData()
         self.parser()
         if("Network" in self.frameTitle):
@@ -123,7 +126,7 @@ class Frame:
     @param legendElements: A list of legend elements that will be modified with more information.
     """
     def parserInt(self, legendElements):
-        self.intReader.skip(26)
+        self.intReader.skip(6)
         condition = False
         line = self.intReader.next()
         posInfo = nx.get_node_attributes(self.graph, 'pos')
@@ -194,8 +197,10 @@ class Frame:
         nx.draw_networkx(self.graph, pos = positions,node_size = sizes, node_color = colors, edge_color = edges, with_labels = False)
         ax.tick_params(left=True, bottom=True, labelleft=True, labelbottom=True) #used to reveil the axis numbers
         plt.legend(handles = legendElements,loc = 'upper right')#bbox_to_anchor=(1, 1));
-        #plt.show()
 
+        plt.savefig("C:\\Users\\prabu\\OneDrive\Desktop\\School\\MikeInts\\Chakraborty\\FinalImages\\FrameVideo\\" + str(self.frameNum))
+        #plt.show()
+        plt.close()
 
     """
     Details: The method shrink reduces an array's elements by a scalar amount.
@@ -224,12 +229,40 @@ class Frame:
         return legendElements
 
     """
+    Details: The method incrementFrameNum keeps track of the number of frames in a specific video.
+    """
+    def incrementFrameNum(self):
+        self.frameNum = self.frameNum + 1
+
+    """
     Details: The method toString prints the objects name for debugging purposes.
     @return self.frameTitle: Returns the title of this frame object.
     """
     def toString(self):
         return self.frameTitle
 
+
+"""
+Details: The Video object is used to produce a single graph with networkx/matplotlib packadges.
+This constructor can be overloaded so that it can create both position and network graphs.
+@param frame: This frame will be the initial frame of our video.
+
+"""
+class Video:
+
+    def __init__(self, frame): # network videos
+        self.frame = frame
+        self.frame.run()
+    def nextFrame(self):
+        print(self.frame.frameNum)
+        cur = self.frame
+        cur.incrementFrameNum()
+        self.frame = Frame(cur.parReader,cur.intReader, cur.frameNum)
+        self.frame.run()
+
+    def run(self, videoLength):
+        for i in range(0, videoLength):
+            self.nextFrame()
 def main():
     startTime = timeit.default_timer()
 
@@ -237,15 +270,45 @@ def main():
     listDir = os.listdir(direction)  # returns a list of files within this directory
     file = open(direction+ listDir[0], "r") #creates a file object from list listDir
     x = FileReader(listDir[0],direction)
+    x.skip(17)
 
     direction = "C:\\Users\\prabu\\OneDrive\Desktop\\School\\MikeInts\\Chakraborty\\ParticleInteration/"
     listDir = os.listdir(direction)  # returns a list of files within this directory
     file = open(direction + listDir[0], "r") #creates a file object from list listDir
     y = FileReader(listDir[0], direction)
-
+    y.skip(20)
 
     frame1 = Frame(x,y)
-    frame1.run()
+    video = Video(frame1)
+    video.run(100)
 
     print("Runtime: ", timeit.default_timer() - startTime)
 main()
+
+"""
+v.8 s1
+#old:[(300f, 355.95)]
+#new:[(300f, 139.19)]2.5x
+
+
+v.8 s10 "test2"
+#old:[(100f,407.7904915)]
+#new:[(100f,36.5035438)] 10x???
+
+v.8 s10 "test1"
+#old:[(450f, 2132.4332805999998)]
+#new:[(450f,213.9816998)] 10x???
+
+v.8 s10
+#old:[(860f,4185.770987)]
+#new:[(860f,371.5872071)] 10x???
+
+v.8 s100
+#old:[(100f,392.7095309)]
+#new:[(100f,43.3015117)] 10x???
+
+
+v.8 s100
+#old:[(860f,3291.9093841000004)]
+#new:[(860f,388.1169188)] 10x???
+"""
