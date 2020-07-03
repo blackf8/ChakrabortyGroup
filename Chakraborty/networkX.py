@@ -124,6 +124,7 @@ def initializationData(frames): # assume 1
     return start, end
 
 def main():
+    print("hello")
     startTime = timeit.default_timer()
     frames = 100#int(input("How many frames do you want to produce?"))
     start2 = 26

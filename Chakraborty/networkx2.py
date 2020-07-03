@@ -9,7 +9,15 @@ from matplotlib.lines import Line2D
 #0.000214075 * 72.1195 == shift
 # y val = add Lz to the original value for y.
 # x val = add the shift to the original value for x.
+""""
+Things to improve/ Things to add
+--> Show portions of graphs, e.x: partial domains[x1,x2]
+--> Fix how the force time series is called in video
+--> Add/Calculate boundary particles
 
+
+
+"""
 """
 Details: The fileReader object initialization begins here.
 @param fileName: The name of the file we want to read.
@@ -32,6 +40,7 @@ class FileReader:
 
     """
     Details: The method readLine reads a single line from a given file.
+    Not used currently but is useful for testing the file reader.
     @return self.file.readline(): Uses our file object's readline method to return a line of text.
     """
     def readLine(self):
@@ -39,6 +48,7 @@ class FileReader:
 
     """
     Details: The method readLines reads every line from a given file.
+    Not used currently but is useful for testing the file reader.
     @return self.file.readlines(): Uses our file object's readlines method to return a list of rows.
     """
     def readLines(self):
@@ -54,7 +64,7 @@ class FileReader:
 
     """
     Details: The method next simply calls next on our iterator object self.generator
-    @return self.generator.__next__(): Returns a reference to the iterator after calling __next__().
+    @return self.generator.__next__(): Returns the next line after calling __next__().
     """
     def next(self):
         return self.generator.__next__()
@@ -76,9 +86,6 @@ class FileReader:
         packingFrac = splitName[1][7:].split("B")[0]
         stress = splitName[7].split("cl")[0]
         return packingFrac + stress
-    #def frameCreator(self):
-
-
 
 """
 Details: The frame object is used to produce a single graph with networkx/matplotlib packadges.
@@ -116,38 +123,43 @@ class Frame:
         #self.parReader.skip(17)
         legendElements = self.legendData()
         self.parser()
+        redCount = None
+        blueCount = None
         if("Network" in self.frameTitle):
-            self.parserInt(legendElements)
+            redCount, blueCount = self.parserInt(legendElements)
         self.networkX(legendElements)
+        return redCount,blueCount
+        #(undo this later!! this is for the ime series count)
 
     """
     Details: The method parserInt will clean the data from the intFile for plotting.
     This method is only called for network graphs.
     @param legendElements: A list of legend elements that will be modified with more information.
+    @return numRed: The number of lubricated.......
     """
     def parserInt(self, legendElements):
         self.intReader.skip(6)
         condition = False
         line = self.intReader.next()
         posInfo = nx.get_node_attributes(self.graph, 'pos')
-        numRed = 0
-        numBlue = 0
+        numRed = 0 #non-lubricated/ Contact
+        numBlue = 0#lubricated/ Non-Contact
         while(condition == False):
             line = line.split(" ")
             first = float(line[0])
             second = float(line[1])
             if(abs(posInfo[first][1]-posInfo[second][1]) < 50 and abs(posInfo[first][0]-posInfo[second][0]) < 50):
                 if(line[2] == "0"): #no-contact
-                    self.graph.add_edge(float(line[0]), float(line[1]), color = "red")
-                    numRed = numRed + 1
-                elif(line[2] != "0"): #contact
                     self.graph.add_edge(float(line[0]), float(line[1]), color = "blue")
                     numBlue = numBlue + 1
+                elif(line[2] != "0"): #contact
+                    self.graph.add_edge(float(line[0]), float(line[1]), color = "red")
+                    numRed = numRed + 1
             line = self.intReader.next()
             condition = '#' in line
-        legendElements.append(Line2D([0],[0],color = 'r', label = str(numRed) + '|#!Contact' , lw = 3))
-        legendElements.append(Line2D([0],[0], color = 'b', label = str(numBlue) +'|#Contact', lw=3))
-
+        legendElements.append(Line2D([0],[0],color = 'r', label = str(numRed) + '|#Contact' , lw = 3))
+        legendElements.append(Line2D([0],[0], color = 'b', label = str(numBlue) +'|#!Contact', lw=3))
+        return numRed,numBlue
     """
     Details: The method parser will clean our particle pos data for plotting via self.networkX().
     """
@@ -223,8 +235,9 @@ class Frame:
         self.parReader.skip(1)
         stress = self.parReader.next().split(" ")[4]
         self.parReader.skip(3)
-
-        legendElements = [Line2D([0],[0], marker = 'o',color = 'w', label = 'cumStrn:' + cumStrain[:6], markerfacecolor = 'black', markersize = 5),
+        frame_label = 'Frame:' + str(self.frameNum)
+        legendElements = [Line2D([0],[0], marker = 'o',color = 'w', label = frame_label, markerfacecolor = 'black', markersize = 5),
+                          Line2D([0],[0], marker = 'o',color = 'w', label = 'cumStrn:' + cumStrain[:6], markerfacecolor = 'black', markersize = 5),
                           Line2D([0],[0], marker = 'o',color = 'w', label = 'shearRt:' + stress[:6], markerfacecolor = 'black', markersize = 5)]
         return legendElements
 
@@ -246,23 +259,56 @@ class Frame:
 Details: The Video object is used to produce a single graph with networkx/matplotlib packadges.
 This constructor can be overloaded so that it can create both position and network graphs.
 @param frame: This frame will be the initial frame of our video.
+@param forceType: This variable allows you to get a timeseries of network videos.
 
 """
 class Video:
-
-    def __init__(self, frame): # network videos
+#redundant code fix this later* Remember: matplotlib kills runtime and storage
+    def __init__(self, frame, forceType): # network videos
         self.frame = frame
-        self.frame.run()
+        self.forceType = forceType
+        if(self.forceType):
+            self.x1 = []
+            self.x2 = []
+    """
+    Details: The method nextFrame creates the next frame for our video.
+    """
     def nextFrame(self):
+        if(self.forceType):
+            x1,x2 = self.frame.run()
+            self.x1.append(x1)
+            self.x2.append(x2)
+        else:
+            self.frame.run()
         print(self.frame.frameNum)
         cur = self.frame
         cur.incrementFrameNum()
         self.frame = Frame(cur.parReader,cur.intReader, cur.frameNum)
-        self.frame.run()
 
+    """
+    Details: The method run repeatedly calls on nextFrame to form our video.
+    @param videoLength: The length of the video we want.
+    """
     def run(self, videoLength):
-        for i in range(0, videoLength):
+        for i in range(0, videoLength-1):
             self.nextFrame()
+        if(self.forceType):
+            self.forceTypePlot()
+
+    """
+    Details: The method forceTypePlot plots a timeseries of the forces in a network video.
+    """
+    def forceTypePlot(self):
+        plt.plot(list(range(0,self.frame.frameNum-1)),self.x1, color = 'r', marker = 'o')
+        plt.plot(list(range(0,self.frame.frameNum-1)),self.x2, color = 'b', marker = 'o')
+        plt.xlabel("TimeStep(Frames)")
+        plt.ylabel("Number of Forces")
+        plt.title(self.frame.parReader.frameDetails())
+        plt.show()
+
+"""
+Details: The main method is where we create objects for testing and programming purposes.
+"""
 def main():
     startTime = timeit.default_timer()
 
@@ -279,13 +325,20 @@ def main():
     y.skip(20)
 
     frame1 = Frame(x,y)
-    video = Video(frame1)
-    video.run(100)
+    video = Video(frame1, True)
+    video.run(2)
 
     print("Runtime: ", timeit.default_timer() - startTime)
 main()
 
+
 """
+Experimental Data gain from using this program against the older version 'networkx.py'
+
+v.8 s1
+#old:[(100f,79.88500909999999)]
+#new:[(100f,32.1224409)]
+
 v.8 s1
 #old:[(300f, 355.95)]
 #new:[(300f, 139.19)]2.5x
@@ -307,6 +360,9 @@ v.8 s100
 #old:[(100f,392.7095309)]
 #new:[(100f,43.3015117)] 10x???
 
+v.8 s100
+#old:[(450f,2014.4692045)]
+#new:[(450f, 171.2547038000000)]x10??
 
 v.8 s100
 #old:[(860f,3291.9093841000004)]
