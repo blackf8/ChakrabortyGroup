@@ -1,9 +1,14 @@
 import os
 import math
 import timeit
+import numpy as np
+import scipy.stats as ss
+import statistics as stats
 import networkx as nx
 import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
+import seaborn as sns
+
 """
 Program: networkx2.py
 Author: Prabu Gugagantha
@@ -15,21 +20,21 @@ By using objects and generators we can greatly improve the runtime and memory us
 allowing the production of faster videos. At the end of this program I included some runtime tests to see how
 efficient these changes actually are.
 """
-#test
-#height of box times the cumulative strain
-#0.000214075 * 72.1195 == shift
-# y val = add Lz to the original value for y.
-# x val = add shift to the original value for x.
+
 """"
 Things to improve/ Things to add
---> Show portions of graphs, e.x: partial domains[x1,x2]
+-?> Show portions of graphs, e.x: partial domains[x1,x2]?
+-?> Add/Calculate boundary particles
+-*> Change the Force Histogram Fraction --> contact/total
+--> Create Histograms for every time stamp having the number of contact forces for each node.
+Done:
 -*> Fix how the force time series is called in video
---> Add/Calculate boundary particles
 -*> Automate the video making process
     -*> Allow for one video to be created automatically without manually inputting amount of Frames
     -*> Create a loop that will create multiple videos.
 -*> Test all the videos in the database
 """
+
 
 
 """
@@ -149,13 +154,13 @@ class Frame:
     The if statement allows for the incorporation of the edges for our network graph.
     """
     def run(self,folder,line):
-        legendElements = self.legendData(line)
+        legendElements,cumStrain = self.legendData(line)
         self.parser()
         redCount = None
         blueCount = None
         if("Network" in self.frameTitle):
-            redCount, blueCount = self.parserInt(legendElements)
-        self.networkX(legendElements, folder) #add a parameter that takes you to the folder. maybe the title string?
+            redCount, blueCount = self.parserInt(legendElements, cumStrain)# needs cum strain
+        #self.networkX(legendElements, folder) #add a parameter that takes you to the folder. maybe the title string?
         return redCount,blueCount
 
     """
@@ -164,13 +169,14 @@ class Frame:
     @param legendElements: A list of legend elements that will be modified with more information.
     @return numRed: The number of lubricated.......
     """
-    def parserInt(self, legendElements):
+    def parserInt(self, legendElements, cumStrain):
         self.intReader.skip(6)
         condition = False
         line = self.intReader.next()
         posInfo = nx.get_node_attributes(self.graph, 'pos')
         numRed = 0 #non-lubricated/ Contact
         numBlue = 0#lubricated/ Non-Contact
+        nodeCount = 1000
         while(condition == False):
             line = line.split(" ")
             first = float(line[0])
@@ -182,14 +188,47 @@ class Frame:
                 elif(line[2] != "0"): #contact
                     self.graph.add_edge(float(line[0]), float(line[1]), color = "red")
                     numRed = numRed + 1
+
+            """
             else:
-                """
-                Here is where we would add the boundary points with different colored edges
-                posInfo[first][0] = x1
-                posInfo[first][1] = y1
-                posInfo[second][0] = x2
-                posInfo[second][1] = y2
-                """
+                x1 = posInfo[first][0]
+                y1 = posInfo[first][1]
+                x2 = posInfo[second][0]
+                y2 = posInfo[second][1]
+                Lz = 73.993
+                shift = cumStrain * Lz
+                if(abs(x1-x2) < 10):
+                    if(y2 > y1):# swap particle 1 with particle 2
+                        y1,y2 = y2,y1
+                        x1,x2 = x2,x1
+                        first, second = second, first
+                    self.graph.add_node(nodeCount, pos = (((x1 + (Lz/2) - shift) % Lz) - Lz/2, y1 - Lz), color = 'g', size = 1)
+                    self.graph.add_edge(second, nodeCount, color = 'grey')
+                    nodeCount = nodeCount + 1
+                    self.graph.add_node(nodeCount, pos = (((x2 + (Lz/2) + shift) % Lz) - Lz/2, y2 + Lz), color = 'g', size = 1)
+                    self.graph.add_edge(first, nodeCount, color = 'grey')
+                    nodeCount = nodeCount + 1
+                elif(abs(x1-x2) < 10):
+                    if(x2 > x1):# swap particle 1 with particle 2
+                        y1,y2 = y2,y1
+                        x1,x2 = x2,x1
+                        first, second = second, first
+                    self.graph.add_node(nodeCount, pos = (x1 - Lz, y1), color = 'g', size = 1)
+                    self.graph.add_edge(first, nodeCount, color = 'grey')
+                    nodeCount = nodeCount + 1
+                    self.graph.add_node(nodeCount, pos = (x2 + Lz, y2), color = 'g', size = 1)
+                    self.graph.add_edge(second, nodeCount, color = 'grey')
+                    nodeCount = nodeCount + 1
+            """
+
+            """
+            Here is where we would add the boundary points with different colored edges
+            #test
+            #height of box times the cumulative strain
+            #0.000214075 * 72.1195 == shift
+            # y val = add Lz to the original value for y.
+            # x val = add shift to the original value for x.
+            """
             line = self.intReader.next()
             if(not line == None):
                 condition = '#' in line #error when hits final line
@@ -281,7 +320,7 @@ class Frame:
         legendElements = [Line2D([0],[0], marker = 'o',color = 'w', label = frame_label, markerfacecolor = 'black', markersize = 5),
                           Line2D([0],[0], marker = 'o',color = 'w', label = 'cumStrn:' + cumStrain[:6], markerfacecolor = 'black', markersize = 5),
                           Line2D([0],[0], marker = 'o',color = 'w', label = 'shearRt:' + stress[:6], markerfacecolor = 'black', markersize = 5)]
-        return legendElements
+        return legendElements, float(cumStrain)
 
     """
     Details: The method incrementFrameNum keeps track of the number of frames in a specific video.
@@ -320,6 +359,25 @@ class Video:
             os.makedirs(parent + temp)
             self.folder = path
 
+        folderName = "overview"
+        path2 = os.path.join(parent,folderName)
+
+        if not os.path.exists(path2):
+            os.makedirs(parent + folderName)
+
+        self.overview = parent + folderName
+
+        path = self.overview.split("/")
+        newPath = ""
+        for i in range (len(path)):
+            newPath = newPath + path[i] + "\\"
+
+        self.overview = newPath
+
+        self.save = self.frame.frameTitle[22:]
+        if("." in self.save):
+            self.save = self.save[:1] + "_" + self.save[2:]
+        self.save = str(self.save)
     """
     Details: The method nextFrame creates the next frame for our video.
     """
@@ -332,6 +390,9 @@ class Video:
         else:
             self.frame.run(self.folder, line)
         cur = self.frame
+
+        self.nodeConnectionHistogram()
+
         cur.incrementFrameNum()
         self.frame = Frame(cur.parReader,cur.intReader, cur.frameNum)
 
@@ -348,9 +409,32 @@ class Video:
             while(not line == None):
                 self.nextFrame(line)
                 line = self.frame.parReader.next()
+        #plt.savefig(self.overview + self.save + "Connection Histogram Overlayed")
+        #plt.close() # Closes the overlayed historgram plot. Doing this messes up with the way the program works!
         self.forceTypePlot()
         #self.frame.hasNextFrame()
 
+    def nodeConnectionHistogram(self):
+        edgeCount = []
+        for n in self.frame.graph:
+            edgeCount.append(len(self.frame.graph.edges(n)))
+        #connectList = list(nx.get_edge_attributes(self.frame.graph, 'color').values())
+
+        plt.hist(edgeCount,bins = round(math.sqrt(len(edgeCount))))
+        plt.xlabel("Data Intervals")
+        plt.ylabel("Frequency(Number of Nodes with x # of Connections)")
+        plt.title("Connection Histogram: " + self.frame.parReader.frameDetails())
+
+        path = self.folder.split("/")
+        newPath = ""
+        for i in range (len(path)):
+            newPath = newPath + path[i] + "\\"
+        newPath = newPath + "connections\\"
+        if not os.path.exists(self.folder + "\\connections"):
+            os.makedirs(newPath)
+
+        plt.savefig(newPath + str(self.frame.frameNum))
+        plt.close()
 
     """
     Details: The method forceTypePlot plots a timeseries of the forces in a network video.
@@ -367,22 +451,60 @@ class Video:
         plt.ylabel("Number of Forces")
         plt.title(self.frame.parReader.frameDetails())
         #plt.show()
-        path = self.folder.split("/")
-        newPath = ""
-        for i in range (len(path)):
-            newPath = newPath + path[i] + "\\"
-        plt.savefig(newPath + "forceTypePlot")
+        plt.savefig(self.overview + self.save+ "ForceTypePlot")
         plt.close()
 
+        #Histogram is made here
         fractions = []
         for i in range(len(self.x1)):
-            fractions.append(self.x1[i]/self.x2[i])
+            fractions.append(self.x1[i]/(self.x1[i] + self.x2[i]))
+        print(fractions)
         plt.hist(fractions,bins = round(math.sqrt(len(fractions))))
         plt.xlabel("Data Intervals")
-        plt.ylabel("Frequency(contact/non-contact)")
+        plt.ylabel("Frequency(Percent of Contact Forces)")
         plt.title("Distribution: " + self.frame.parReader.frameDetails())
 
-        plt.savefig(newPath + "distribution")
+        plt.savefig(self.overview + self.save+ "Percent Contact Force Histogram")
+        plt.close()
+        #Distribution is here
+        x = fractions
+        mu = sum(x)/len(x)
+        sigma = stats.stdev(x)
+
+        x.sort()
+        y_pdf = ss.norm.pdf(x, mu, sigma) # the normal pdf(probability density function)
+        #y_cdf = ss.norm.cdf(x, mu, sigma) # the normal cdf(cummulative density function)
+
+        xSD = []
+        ySD = []
+        values = mu - (3*sigma)
+
+
+        plt.plot(x, y_pdf, label='pdf')
+        for i in range(7):
+            plt.plot([values,values],[0,ss.norm.pdf(values,mu,sigma)],'black')
+            values = values + sigma
+        #plt.plot(x, y_cdf, label='cdf')
+        legendElements = [Line2D([0],[0], marker = 'o',color = 'w', label = 'Mean: ' + str(mu)[:6], markerfacecolor = 'black', markersize = 5),
+                          Line2D([0],[0], marker = 'o',color = 'w', label = 'Standard Deviation: ' + str(sigma)[:6], markerfacecolor = 'black', markersize = 5)]
+        plt.legend(handles = legendElements,loc = 'upper right')#bbox_to_anchor=(1, 1));
+        plt.title('Probability Density Function on percent Contact Forces')
+        plt.xlabel('Ratio of Contact/Non-Contact Forces')
+        plt.ylabel('Probabilty per Measurement Unit of x')
+        plt.savefig(self.overview + self.save+ "Distribution of Contact Force")
+        plt.close()
+
+
+        #Seaborn Distribution
+
+        sns.distplot(x, hist=True, kde=True,
+             bins=int(math.sqrt(len(x))), color = 'darkblue',
+             hist_kws={'edgecolor':'black'},
+             kde_kws={'linewidth': 2})
+        plt.title('Seaborn Probability Distribution: Stress ' +self.save)
+        plt.xlabel('Percent Contact Forces')
+        plt.ylabel("Probability Density")
+        plt.savefig(self.overview + self.save+ "Probability Distribution")
         plt.close()
 
 """
@@ -395,7 +517,7 @@ def main():
     directionInt = "D:\\Chakraborty\\int/"
     listDirData = sorted(os.listdir(directionData))# returns a list of files within this directory
     listDirInt = sorted(os.listdir(directionInt))# returns a list of files within this directory
-    for i in range(len(listDirData)):
+    for i in range(1):
         print("File Number: " + str(i))
         print(listDirData[i])
         print(listDirInt[i])
