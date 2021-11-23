@@ -56,7 +56,7 @@ def manual_acf(shear_rate, label, cwd, newFileName, m, cumulative_Strain):
         #plt.plot(resultList)
         plt.xlabel("Lag",fontsize=12)
         plt.ylabel("Cumulative Strain",fontsize = 12)
-        plt.xlim(0,1)
+        plt.xlim(0,3)
         #plt.savefig(cwd + "/ACFxAlpha/" + newFileName + ".png")
         #plt.show()
         #print(label)
@@ -153,9 +153,9 @@ def fileNameParser(fileName):
 def main():
     plt.style.use("seaborn-deep")
     cwd = os.getcwd()
-    listDir = os.listdir(cwd + "/0.76stress20")
+    listDir = os.listdir(cwd + "/data/0.76stress20")
     for i in range(len(listDir)):
-        file = open("0.76stress20/" + listDir[i], encoding="ISO-8859-1")
+        file = open("data/0.76stress20/" + listDir[i], encoding="ISO-8859-1")
         s = listDir[i]
         label = []
         newFileName = fileNameParser(listDir[i])
