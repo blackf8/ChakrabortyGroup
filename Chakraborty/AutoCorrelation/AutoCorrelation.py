@@ -13,7 +13,7 @@ import statistics
 
 
 def df_manual_acf(df, label, cwd):
-    print("alpha",  (df['cumulated strain'].max() - df['cumulated strain'].min()), df['cumulated strain'].shape[0])
+    #print("alpha",  (df['cumulated strain'].max() - df['cumulated strain'].min()), df['cumulated strain'].shape[0])
     alphaValue = (df['cumulated strain'].max() - df['cumulated strain'].min()) / df['cumulated strain'].shape[0]
     lags = df.shape[0] // 2
     resultList = [0] * lags
@@ -46,14 +46,9 @@ def df_dataCalculation(df):
 
 def fileNameParser(fileName):
     # st_D2N1000VF0.8Bidi1.4_0.5Square_1_preshear_nobrownian_2D_stress1cl_shear
-    parts = fileName.split("_")
-    key = ["stress", "par", "VF", "shear.dat"]
-    name = ""
-    for i in range(len(parts)):
-        for j in range(len(key)):
-            if key[j] in parts[i]:
-                name = name + parts[i]
-    return name[:-4]
+    packing = "Packing" + fileName.split("VF")[1].split('B')[0]
+    stress = "Stress" + fileName.split("stress")[1].split('cl')[0]
+    return packing + stress
 
 def dat_to_df(file_name, samples_skip = 0):
     '''
@@ -88,60 +83,137 @@ def interpolate(df, maxLength):
     if num_nulls != 0:
         placement = maxLength/num_nulls
     for i in range(1, num_nulls + 1):
-        array.insert((i*round(placement))%len(array), np.nan)
+        if((i*round(placement))%len(array) == 0):
+            array.insert(((i+1)*round(placement))%len(array), np.nan)
+        else:
+            array.insert((i*round(placement))%len(array), np.nan)
     return pd.DataFrame(array, columns = ['lags']).interpolate(method='linear')
+
+
+def plot_all(data, alphas, file_name, cwd, run_name):
+    for key in data.keys():
+        alphaValue = alphas[key]
+        plt.scatter(data[key].index*alphas[key], data[key]['lags'], s=0.5)
+    plt.title(file_name)
+    plt.xlabel("Cumulative Strain Lag",fontsize=12)
+    plt.ylabel("Shear Rate Autocorrelation",fontsize = 12)
+    plt.xlim(0,1)
+    plt.savefig(cwd + "/results/" + "Runs_" +fileNameParser(run_name) + ".png")
+    #plt.show()
+    plt.close()
+
+def average_ACF(data, alpha, maxLength, file_name, cwd, run_name, plot = True, plotall = False):
+    plot_avg = pd.DataFrame([0]*maxLength, columns = ['lags'])
+    for key in data.keys():
+        plot_avg['lags'] = plot_avg['lags'] + data[key]['lags']
+    plot_avg['lags'] = plot_avg['lags']/10
+    if(plot):
+        plt.title(file_name)
+        plt.scatter(plot_avg.index*alpha, plot_avg['lags'], s=0.5, linewidths = 3)
+        plt.xlabel("Cumulative Strain Lag",fontsize=12)
+        plt.ylabel("Shear Rate Autocorrelation",fontsize = 12)
+        plt.xlim(0,1)
+        plt.savefig(cwd + "/results/" + "Avg_" +fileNameParser(run_name) + ".png")
+        #plt.show()
+        plt.close()
+    if(plotall):
+        plt.scatter(plot_avg.index*alphaValue, plot_avg['lags'], s=0.5, linewidths = 3)
+    return plot_avg
+
+def variance_ACF(data, alphas, avg_df, maxLength, file_name, cwd, run_name, plotall = False):
+    var_data = {}
+    var_sum = pd.DataFrame([0]*maxLength, columns = ['lags'])
+    for i in data.keys():
+        var_data[i] = (np.power(data[i]['lags'] - avg_df['lags'],2), alphas[i])
+        var_sum['lags'] = var_sum['lags'] + np.power(data[i]['lags'] - avg_df['lags'],2)
+        #plt.scatter(var_data[i][0].index*var_data[i][1], var_data[i][0], s=0.5)
+    var_sum['lags'] = var_sum['lags']/10
+    plt.scatter(var_sum.index*alphas[1], var_sum, s=0.5, linewidths = 3)
+    plt.title(file_name)
+    plt.xlabel("Cumulative Strain Lag",fontsize=12)
+    plt.ylabel("Autocorrelation Variance",fontsize = 12)
+    plt.xlim(0,1)
+    plt.savefig(cwd + "/results/"+ "VarAll_" +fileNameParser(run_name) + ".png")
+    #plt.show()
+    plt.close()
+    return var_sum
+
 
 def main():
     plt.style.use("seaborn-deep")
     cwd = os.getcwd()
-    files = os.listdir(cwd+"/data/")
-    for file_name in files:
-        print(file_name)
-        listDir = os.listdir(cwd + "/data/" + file_name)
+    files = os.listdir(cwd+"/data/0.76/")
+    mergePlot = True
+    data_avg = {}
+    data_var = {}
+    data_alpha = {}
+
+
+
+    stresses = []
+    for i in os.listdir(cwd + "/data/0.76/" + files[0]):
+        stresses.append(fileNameParser(i).split("Stress")[1])
+
+
+    """
+    stresses = [stresses[3], stresses[6], stresses[9]]
+    for stress in stresses:
         data = {}
+        alphas = {}
         maxLength = 0
-        for i in range(len(listDir)):
-            print(i)
-            df = dat_to_df("data/"+ file_name +"/" + listDir[i], 23) #new dataframe implementation
+        for file_name in files:
+            print(stress, file_name)
+            run_name = "st_D2N1000VF0.76Bidi1.4_0.5Square_"+file_name.split("run")[1]+"_preshear_nobrownian_2D_stress"+stress+"cl_shear.dat"
+            df = dat_to_df(cwd + "/data/0.76/" + file_name + "/" + run_name)
             df_dataCalculation(df)
-            a,b = df_manual_acf(df, fileNameParser(listDir[i]).split("stress"), cwd)
-            maxLength = max(maxLength, a.shape[0])
-            data[i] = (a,b)
-
-        plot_avg = pd.DataFrame([0]*maxLength, columns = ['lags'])
+            df,alpha = df_manual_acf(df, fileNameParser(run_name).split("stress"), cwd)
+            maxLength = max(maxLength, df.shape[0])
+            if(file_name in data_alpha.keys()):
+                data_alpha[stress] = min(data_alpha[file_name], alpha)
+            else:
+                data_alpha[stress] = alpha
+            data[int(file_name.split("run")[1])] = df
+            alphas[int(file_name.split("run")[1])] = alpha
         for key in data.keys():
-            df_lags = interpolate(data[key][0], maxLength)
-            plot_avg['lags'] = plot_avg['lags'] + df_lags['lags']
-            alphaValue = data[key][1]
-            print(alphaValue, len(df_lags.index), alphaValue * len(df_lags.index))
-            plt.scatter(df_lags.index*alphaValue, df_lags['lags'], s=0.5)
-        plt.title(file_name)
-        plt.scatter(df_lags.index*alphaValue, plot_avg['lags']/10, s=0.5, linewidths = 3)
-        plt.xlabel("Lag",fontsize=12)
-        plt.ylabel("Cumulative Strain",fontsize = 12)
+            df_lags = interpolate(data[key], maxLength)
+        plot_all(data, alphas, file_name, cwd, run_name)
+        data_avg[stress] = average_ACF(data, alpha, maxLength, file_name, cwd, run_name, plot = True)
+        data_var[stress] = variance_ACF(data, alphas, data_avg[stress], maxLength, file_name, cwd, run_name)
+    if(mergePlot):
+        for key in stresses:
+            plt.scatter(data_avg[key].index*data_alpha[key], data_avg[key]['lags'], s=0.5)
+        plt.title('Autocorrelation')
+        plt.legend(stresses, markerscale=6)
+        plt.axhline(y = 0, color = 'grey', linestyle = '-', lw = 1)
+        plt.xlabel("Cumulative Strain Lag",fontsize=12)
+        plt.ylabel("Average Shear Rate Autocorrelation",fontsize = 12)
         plt.xlim(0,1)
-        plt.savefig(cwd + "/samestressACF/" + fileNameParser(listDir[i]) + ".png")
-        #plt.show()
+        plt.savefig(cwd + "/results/"+ "TotalAvg_" + stress + ".png")
         plt.close()
+
+        for key in data_avg.keys():
+            plt.scatter(data_var[key].index*data_alpha[key], data_var[key]['lags'], s=1)
+        plt.title('Variance')
+        plt.legend(stresses, markerscale=6)
+        plt.xlabel("Cumulative Strain Lag",fontsize=12)
+        plt.ylabel("Average Autocorrelation Variance",fontsize = 12)
+        plt.xlim(0,1)
+        plt.savefig(cwd + "/results/"+ "TotalVar_" + stress + ".png")
+        plt.close()
+        """
 main()
-
-
-
-
-
-
 '''
 Notes:
 
 For each dataset subtract the average.
 
 *y axis is c
-1) Create ten new lines with the average subtracted.
-2) Square the resulting values
-3) sum all 10 squared values
-4) divide by 10 to normalize
+1) [x] Create ten new lines with the average subtracted.
+2) [x] Square the resulting values
+3) [x] sum all 10 squared values
+4) [x] divide by 10 to normalize
 
-How does the heigh
+How does the height
 
 P: What does the variance look like for each overall dataset.
 
