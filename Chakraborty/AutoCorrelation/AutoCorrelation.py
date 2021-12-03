@@ -155,7 +155,7 @@ def main():
         stresses.append(fileNameParser(i).split("Stress")[1])
 
 
-    """
+    
     stresses = [stresses[3], stresses[6], stresses[9]]
     for stress in stresses:
         data = {}
@@ -200,7 +200,7 @@ def main():
         plt.xlim(0,1)
         plt.savefig(cwd + "/results/"+ "TotalVar_" + stress + ".png")
         plt.close()
-        """
+
 main()
 '''
 Notes:
